@@ -1,0 +1,78 @@
+// // new_book_data = {"name":"towmir day2 test item","rate":150.55,"description":"basic test item","product_type":"goods","sku":"hkdghgck"};
+// // headers_data = Map();
+// // response = invokeurl
+// // [
+// // 	url :"https://www.zohoapis.com/books/v3/items?organization_id=771340721"
+// // 	type :POST
+// // 	parameters:new_book_data.toString()
+// // 	headers:headers_data
+// // 	connection:"towmir_zoho_books_conn"
+// // ];
+// // info response;
+// my_gmail = "towmir@gmail.com";
+// search_param = {"email":my_gmail};
+// contacts_responses = zoho.books.getRecords("Contacts","771340721",search_param,"towmir_zoho_books_connection");
+// // info contacts_responses.get("contacts");
+// contacts_from_books = list();
+// contacts_from_books.addAll(contacts_responses.get("contacts"));
+// // info contacts_from_books.size();
+// // if(contacts_from_books.size() == 0)
+// // {
+// // 	 new_contact_params = Map();
+// // 	 new_contact_params.put("contact_name": "Towmir");
+// // 	 new_contact_params.put("website": "https://www.google.com");
+// // 	 new_contact_params.put("email", my_gmail);
+// // 	 new_contact_response = zoho.books.createRecord("Contacts","771340721",new_contact_params,"towmir_zoho_books_connection");
+// // 	 info new_contact_response;
+// // }
+// return "";
+// info zoho.invoice.getRecordById("Invoices","806857488","3901023000000078016");
+// info zoho.books.getRecords("Invoices", "771340721", "", "towmir_zoho_books_conn");
+// info zoho.books.getRecordsByID("Invoices", "771340721", "3081541000002773001", "towmir_zoho_books_conn");
+line_items_list = List();
+line_items_list.add({"item_id":"3081541000000637434","quantity":"10.00"});
+invoice_map = {"customer_name":"ZXWEBSTUIDO","customer_id":"3081541000002249055","currency_id":"3081541000000074082","line_items":line_items_list,"payment_reminder_enabled":true,"discount_percent":"5.00","discount":"5.00%","discount_type":"entity_level","is_discount_before_tax":true};
+books_invoice_response = zoho.books.createRecord("Invoices","771340721",invoice_map,"towmir_zoho_books_conn");
+books_customer_id = books_invoice_response.get("invoice").get("customer_id");
+search_string = "(ZB_Customer_Id:equals:" + books_customer_id + ")";
+crm_account = zoho.crm.searchRecords("Accounts",search_string);
+crm_account_id = ifnull(crm_account.get(0).get("id"),"");
+// info crm_account_id;
+if(crm_account_id == "")
+{
+	new_account = zoho.crm.createRecord("Accounts", {"Account_Name": books_invoice_response.get("invoice").get("customer_name")});
+	crm_account_id = new_account.get("id");
+} 
+Product_Details = List();
+books_invoice = books_invoice_response.get("invoice");
+for each product in books_invoice.get("line_items")
+{
+	product_string = "(Product_Name:equals:" + product.get("name") + ")";
+	crm_product_list = zoho.crm.searchRecords("Products", product_string);
+	crm_product = crm_product_list.get(0);
+// 	info crm_product;
+	Product_Details.add({
+		"product": {
+			"name": crm_product.get("Product_Name"),
+			"id": crm_product.get("id")
+		},
+		"quantity": product.get("quantity"),
+		"list_price": product.get("rate"),
+		"unit_price": product.get("rate"),
+		"quantity_in_stock": crm_product.get("Qty_in_Stock"),
+		"total": product.get("item_total")
+	});
+}
+invoice_data = {
+	"Grand_Total": books_invoice_response.get("invoice").get("total"),
+	"Product_Details": Product_Details,
+	"Discount": books_invoice_response.get("invoice").get("discount_total"),
+	"Invoice_Date": books_invoice_response.get("invoice").get("date"),
+	"Account_Name": {
+		"id": crm_account.get(0).get("id"),
+		"name": crm_account.get(0).get("Account_Name")
+	},
+	"Subject": books_invoice_response.get("invoice").get("invoice_number")
+};
+info zoho.crm.createRecord("Invoices", invoice_data);
+return "";
